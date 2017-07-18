@@ -1,5 +1,7 @@
-# [Mosketch&trade;](https://www.mokastudio.com) For Maya
-```mosketch_for_maya.py``` is a simple Python script allowing you to stream joint values (orientation and translation) from [Mosketch&trade;](https://www.mokastudio.com) to Maya (and vice versa).
+![Mosketch for Maya](https://user-images.githubusercontent.com/7549728/28314038-58406cb0-6bb9-11e7-87bc-47d7f9e3d46d.png)
+
+# [Mosketch&trade;](https://www.mokastudio.com) for Maya
+```mosketch_for_maya.py``` is a simple Python script allowing you to stream joints values (orientation and translation) from [Mosketch&trade;](https://www.mokastudio.com) to Maya (and vice versa).
 
 ## Installation
 First, download and copy ```mosketch_for_maya.py``` into your local scripts folder:
