@@ -3,11 +3,6 @@
 # [Mosketch&trade;](https://www.mokastudio.com) for Maya
 ```mosketch_for_maya.py``` is a simple Python script allowing you to stream joints values (orientation and translation) from [Mosketch&trade;](https://www.mokastudio.com) to Maya (and vice versa).
 
-<p align="center">
-<img src ="https://user-images.githubusercontent.com/7549728/28315954-f3c3bba4-6bc0-11e7-8adc-fd99964fd55e.png" /><br>
-GUI Overview
-</p>
-
 ## Installation
 First, download and copy ```mosketch_for_maya.py``` into your local scripts folder:
 * __Windows:__ ```<My Documents>\maya\scripts```
@@ -27,13 +22,23 @@ Follow these steps to start streaming from [Mosketch&trade;](https://www.mokastu
 
 __In [Mosketch&trade;](https://www.mokastudio.com):__ 
 1. Import your character
-2. Start streaming (see online help).
+2. Start streaming (see online help)
+<p align="center">
+<img src="https://user-images.githubusercontent.com/7549728/28316205-250e77ac-6bc2-11e7-9bb2-3d3d1ef05582.png" /><br>
+Streaming Properties in Mosketch
+</p>
 
 __In Maya:__
 1. Import your character
 2. Set IP & press Connect
+<p align="center">
+<img src ="https://user-images.githubusercontent.com/7549728/28316712-30d73518-6bc4-11e7-8242-6f8fdb1090f2.png" /><br>
+Mosketch for Maya GUI
+</p>
 
 Now, if you move your character in [Mosketch&trade;](https://www.mokastudio.com), it should also move inside Maya.
+
+__WARNING: make sure you start streaming in Mosketch first.__
 
 ## [Mosketch&trade;](https://www.mokastudio.com)
 [Mosketch&trade;](https://www.mokastudio.com) enables the artists to instantly animate any 3D characters - a humanoid, a dog, a dragon, a  tree, anything - simply by sketching or dragging its joints. 
