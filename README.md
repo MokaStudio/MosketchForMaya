@@ -17,7 +17,7 @@ Then, start the script (with the [script editor](https://knowledge.autodesk.com/
 import mosketch_for_maya
 mosketch_for_maya.start()
 ```
-You can use the Script Editor or put the Python lines above in a shelf button. For more information, please refer to Maya's documentation.
+For more information on how to install a Python script, please refer to Maya's documentation.
 
 When you are done, stop the script:
 ```python
