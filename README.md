@@ -12,7 +12,7 @@ First, download and copy ```mosketch_for_maya.py``` into your local scripts fold
 * __Windows:__ ```<My Documents>\maya\scripts```
 * __MacOSX:__ ```~/Library/Preferences/Autodesk/maya/scripts```
 
-Then, start the script (with the [Script Editor](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-7C861047-C7E0-4780-ACB5-752CD22AB02E-htm.html) a [shelf button](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-58C25080-5864-4709-BE3A-0543E9D1FCF2-htm.html)):
+Then, start the script (with the [script editor](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-7C861047-C7E0-4780-ACB5-752CD22AB02E-htm.html) or a [shelf button](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-58C25080-5864-4709-BE3A-0543E9D1FCF2-htm.html)):
 ```python
 import mosketch_for_maya
 mosketch_for_maya.start()
