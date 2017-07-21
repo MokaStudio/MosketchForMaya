@@ -12,11 +12,12 @@ First, download and copy ```mosketch_for_maya.py```, ```start.png``` and ```stop
 * __Windows:__ ```<My Documents>\maya\scripts```
 * __MacOSX:__ ```~/Library/Preferences/Autodesk/maya/scripts```
 
-Then, open Maya's [script editor](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-7C861047-C7E0-4780-ACB5-752CD22AB02E-htm.html) and execute the following script:
+Then, open Maya's [script editor](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-7C861047-C7E0-4780-ACB5-752CD22AB02E-htm.html) and copy-paste the following script in a Python console tab:
 ```python
 import mosketch_for_maya
 mosketch_for_maya.install()
 ```
+Then press ![Execute Script](https://user-images.githubusercontent.com/7549728/28462913-d907f49c-6e1d-11e7-9b70-6c71b69b41e8.png) (at the top of the Script Editor) to execute it.
 
 You should now have a new Shelf called ```MosketchForMaya``` containing two shelfButtons to __Start__ and __Stop__ the script:
 ![Mosketch for Maya ShelfButtons](https://user-images.githubusercontent.com/7549728/28462385-4e2b9998-6e1b-11e7-9df3-0918b764345d.png)
