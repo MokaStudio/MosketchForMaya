@@ -34,7 +34,8 @@ Streaming Properties in Mosketch
 
 __In Maya:__
 1. Import your character
-2. Start MosketchForMaya Python script
+2. Start ```MosketchForMaya``` Python script by pressing ![Start Mosketch for Maya](https://user-images.githubusercontent.com/7549728/28462640-558a38a6-6e1c-11e7-9d34-b466f11eabe6.png)
+
 2. Set IP & press Connect
 <p align="center">
 <img src ="https://user-images.githubusercontent.com/7549728/28316712-30d73518-6bc4-11e7-8242-6f8fdb1090f2.png" /><br>
@@ -44,6 +45,8 @@ Mosketch for Maya GUI
 Now, if you move your character in [Mosketch&trade;](https://www.mokastudio.com), it should also move inside Maya.
 
 __WARNING: make sure you start streaming in Mosketch first.__
+
+To Stop the ```MosketchForMaya``` Python script, press ![Stop Mosketch for Maya](https://user-images.githubusercontent.com/7549728/28462639-5588ad60-6e1c-11e7-9588-c3878a4c606d.png).
 
 ## [Mosketch&trade;](https://www.mokastudio.com)
 [Mosketch&trade;](https://www.mokastudio.com) enables the artists to instantly animate any 3D characters - a humanoid, a dog, a dragon, a  tree, anything - simply by sketching or dragging its joints. 
