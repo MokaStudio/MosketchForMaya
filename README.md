@@ -8,21 +8,19 @@ Feel free to adapt it and port it to any other software.
 Please note that the main purpose is to keep the script as short and simple as possible.
 
 ## Installation
-First, download and copy ```mosketch_for_maya.py``` into your local scripts folder:
+First, download and copy ```mosketch_for_maya.py```, ```start.png``` and ```stop.png``` into your local scripts folder:
 * __Windows:__ ```<My Documents>\maya\scripts```
 * __MacOSX:__ ```~/Library/Preferences/Autodesk/maya/scripts```
 
-Then, start the script (with the [script editor](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-7C861047-C7E0-4780-ACB5-752CD22AB02E-htm.html) or a [shelf button](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-58C25080-5864-4709-BE3A-0543E9D1FCF2-htm.html)):
+Then, open Maya's [script editor](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-7C861047-C7E0-4780-ACB5-752CD22AB02E-htm.html) and execute the following script:
 ```python
 import mosketch_for_maya
-mosketch_for_maya.start()
+mosketch_for_maya.install()
 ```
-For more information on how to install a Python script, please refer to Maya's documentation.
 
-When you are done, stop the script:
-```python
-mosketch_for_maya.stop()
-```
+You should now have a new Shelf called ```MosketchForMaya``` containing two shelfButtons to __Start__ and __Stop__ the script:
+![Mosketch for Maya ShelfButtons](https://user-images.githubusercontent.com/7549728/28462385-4e2b9998-6e1b-11e7-9df3-0918b764345d.png)
+
 ## Streaming
 Follow these steps to start streaming from [Mosketch&trade;](https://www.mokastudio.com) to Maya.
 
@@ -36,6 +34,7 @@ Streaming Properties in Mosketch
 
 __In Maya:__
 1. Import your character
+2. Start MosketchForMaya Python script
 2. Set IP & press Connect
 <p align="center">
 <img src ="https://user-images.githubusercontent.com/7549728/28316712-30d73518-6bc4-11e7-8242-6f8fdb1090f2.png" /><br>
