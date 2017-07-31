@@ -29,7 +29,7 @@ __In [Mosketch&trade;](https://www.mokastudio.com):__
 1. Import your character
 2. Start streaming [(see online help)](http://support.mokastudio.com/support/solutions/articles/6000176455-streaming)
 <p align="center">
-<img src="https://user-images.githubusercontent.com/7549728/28316205-250e77ac-6bc2-11e7-9bb2-3d3d1ef05582.png" /><br>
+<img src="https://user-images.githubusercontent.com/7549728/28783613-28d67980-7611-11e7-9bd2-ef00740a1907.png" /><br>
 Streaming Properties in Mosketch
 </p>
 
