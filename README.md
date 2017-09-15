@@ -8,7 +8,7 @@ Feel free to adapt it and port it to any other software.
 Please note that the main purpose is to keep the script as short and simple as possible.
 
 ## Installation
-First, download and uncompress [MosketchForMaya-master.zip](https://github.com/MokaStudio/MosketchForMaya/archive/master.zip). Then copy ```mosketch_for_maya.py```, ```start.png``` and ```stop.png``` into your local scripts folder:
+First, download and uncompress [MosketchForMaya-master.zip](https://github.com/MokaStudio/MosketchForMaya/archive/master.zip). Then copy ```mosketch_for_maya.py```, ```Qt.py```, ```start.png``` and ```stop.png``` into your local scripts folder:
 * __Windows:__ ```<My Documents>\maya\scripts```
 * __MacOSX:__ ```~/Library/Preferences/Autodesk/maya/scripts```
 
