@@ -10,13 +10,20 @@ import pymel.core as pmc
 import maya.OpenMayaUI as OpenMayaUI
 import maya.mel as mel
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-from PySide2 import __version__
-from PySide2 import QtNetwork
-from shiboken2 import wrapInstance
-from PySide2.QtQuick import QQuickView
+# Support for Qt4 and Qt5 depending on Maya version
+from Qt import QtCore
+from Qt import QtGui
+from Qt import QtWidgets
+from Qt import __version__
+from Qt import QtNetwork
+
+from Qt import __binding__
+if __binding__ in ('PySide2', 'PyQt5'):
+    from shiboken2 import wrapInstance
+elif __binding__ in ('PySide', 'PyQt4'):
+    from shiboken import wrapInstance
+else:
+    _print_error("cannot find Qt bindings")
 
 # Global variables
 MAIN_WINDOW = None
@@ -78,13 +85,13 @@ def _create_gui():
     global STATUS_TEXT
 
     maya_window = _get_maya_main_window()
-    MAIN_WINDOW = QMainWindow(maya_window)
+    MAIN_WINDOW = QtWidgets.QMainWindow(maya_window)
     MAIN_WINDOW.setWindowTitle("Mosketch for Maya")
 
-    content = QWidget(MAIN_WINDOW)
-    main_layout = QVBoxLayout(content)
+    content = QtWidgets.QWidget(MAIN_WINDOW)
+    main_layout = QtWidgets.QVBoxLayout(content)
 
-    help_text = QLabel(content)
+    help_text = QtWidgets.QLabel(content)
     help_text.setWordWrap(True)
 
     help_text.setText("""<br>
@@ -92,32 +99,32 @@ def _create_gui():
     <br>""")
     help_text.setOpenExternalLinks(True)
 
-    ip_label = QLabel("IP", content)
-    ip_lineedit = QLineEdit(content)
+    ip_label = QtWidgets.QLabel("IP", content)
+    ip_lineedit = QtWidgets.QLineEdit(content)
     ip_lineedit.setText(IP)
     ip_lineedit.textChanged.connect(_ip_text_changed)
-    ip_layout = QHBoxLayout()
+    ip_layout = QtWidgets.QHBoxLayout()
     ip_layout.addWidget(ip_label)
     ip_layout.addWidget(ip_lineedit)
 
-    buttons_layout = QHBoxLayout()
-    connect_button = QToolButton(content)
+    buttons_layout = QtWidgets.QHBoxLayout()
+    connect_button = QtWidgets.QToolButton(content)
     connect_button.setText("CONNECT")
     connect_button.clicked.connect(_open_connection)
     buttons_layout.addWidget(connect_button)
-    disconnect_button = QToolButton(content)
+    disconnect_button = QtWidgets.QToolButton(content)
     disconnect_button.setText("DISCONNECT")
     disconnect_button.clicked.connect(_close_connection)
     buttons_layout.addWidget(disconnect_button)
-    update_mosketch_button = QToolButton(content)
+    update_mosketch_button = QtWidgets.QToolButton(content)
     update_mosketch_button.setText("UPDATE MOSKETCH")
     update_mosketch_button.setCheckable(False)
     update_mosketch_button.clicked.connect(_update_mosketch)
     buttons_layout.addWidget(update_mosketch_button)
 
-    spacer = QSpacerItem(10, 20)
+    spacer = QtWidgets.QSpacerItem(10, 20)
 
-    STATUS_TEXT = QLabel(content)
+    STATUS_TEXT = QtWidgets.QLabel(content)
     STATUS_TEXT.setWordWrap(True)
     STATUS_TEXT.setText("Not connected yet")
 
@@ -140,8 +147,8 @@ def _get_maya_main_window():
     if ptr is None:
         raise RuntimeError('No Maya window found.')
 
-    window = wrapInstance(long(ptr), QMainWindow)
-    assert isinstance(window, QMainWindow)
+    window = wrapInstance(long(ptr), QtWidgets.QMainWindow)
+    assert isinstance(window, QtWidgets.QMainWindow)
     return window
 
 def _ip_text_changed(text):
