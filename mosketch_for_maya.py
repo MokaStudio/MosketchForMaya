@@ -337,6 +337,7 @@ def _process_hierarchy(hierarchy_data):
     try:
         # First empty JOINT_BUFFER
         JOINTS_BUFFER = {}
+
         # Retrieve all joints from Maya
         all_maya_joints = pmc.ls(type="joint")
 
@@ -345,9 +346,14 @@ def _process_hierarchy(hierarchy_data):
 
         for joint_name in joints_name:
             maya_joints = [maya_joint for maya_joint in all_maya_joints if maya_joint.name() == joint_name]
-            JOINTS_BUFFER[joint_name] = maya_joints
+            if maya_joints:
+                JOINTS_BUFFER[joint_name] = maya_joints
 
         _send_ack_hierarchy_initialized()
+
+        # Print nb joints in Maya and nb joints in BUFFER for information purposes
+        _print_success("mapped " + str(len(JOINTS_BUFFER)) + " maya joints out of " + str(len(all_maya_joints)))
+
     except Exception as e:
         _print_error("cannot process hierarchy data (" + type(e).__name__ + ": " + str(e) +")")
 
@@ -365,21 +371,25 @@ def _process_joints_stream(joints_stream_data):
             # We select all joints having the given name
             joint_name = joint_data['Name']
             maya_joints = JOINTS_BUFFER[joint_name]
-            
-            for maya_joint in maya_joints:
-                # W = [S] * [RO] * [R] * [JO] * [IS] * [T]
-                quat = pmc.datatypes.Quaternion(joint_data['LocalRotation'])                
-                vRO = maya_joint.getRotateAxis()
-                RO = pmc.datatypes.EulerRotation(vRO[0], vRO[1], vRO[2]).asQuaternion()
-                joint_orient = maya_joint.getOrientation()
-                quat = RO.inverse() * quat * joint_orient.inverse()
-                maya_joint.setRotation(quat, space='transform')
 
-                joint_type = joint_data["AnatomicalType"]
-                if joint_type == 7: # This is a 6 DoFs joint so consider translation part too
-                    translation = pmc.datatypes.Vector(joint_data["LocalTranslation"])
-                    # Mosketch uses meters. Maya uses centimeters
-                    translation *= 100
-                    maya_joint.setTranslation(translation, space='transform')
+            if maya_joints:
+                for maya_joint in maya_joints:
+                    # W = [S] * [RO] * [R] * [JO] * [IS] * [T]
+                    quat = pmc.datatypes.Quaternion(joint_data['LocalRotation'])                
+                    vRO = maya_joint.getRotateAxis()
+                    RO = pmc.datatypes.EulerRotation(vRO[0], vRO[1], vRO[2]).asQuaternion()
+                    joint_orient = maya_joint.getOrientation()
+                    quat = RO.inverse() * quat * joint_orient.inverse()
+                    maya_joint.setRotation(quat, space='transform')
+
+                    joint_type = joint_data["AnatomicalType"]
+                    if joint_type == 7: # This is a 6 DoFs joint so consider translation part too
+                        translation = pmc.datatypes.Vector(joint_data["LocalTranslation"])
+                        # Mosketch uses meters. Maya uses centimeters
+                        translation *= 100
+                        maya_joint.setTranslation(translation, space='transform')
+    except KeyError:
+        #_print_error("cannot find " + joint_name + " in maya")
+        pass
     except Exception as e:
         _print_error("cannot process joints stream (" + type(e).__name__ + ": " + str(e) +")")
