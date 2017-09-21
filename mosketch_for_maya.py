@@ -170,6 +170,22 @@ def _print_success(success):
     print success_msg
     STATUS_TEXT.setText(success_msg)
 
+def _print_encoding(string):
+    if isinstance(string, str):
+        print "ordinary string"
+    elif isinstance(string, unicode):
+        print "unicode string"
+    else:
+        print "not a recognized string encoding"
+
+# Verbose level
+VERBOSE = 0
+
+def _print_verbose(msg, verbose_level):
+    global VERBOSE
+    if verbose_level <= VERBOSE:
+        print(msg)
+
 ################################################################################
 ##########          CONNECTION
 ################################################################################
@@ -288,6 +304,7 @@ def _send_ack_hierarchy_initialized():
         ack_packet['Type'] = "AckHierarchyInitialized"
         json_data = json.dumps(ack_packet)
         CONNECTION.write(json_data)
+        _print_verbose("AckHierarchyInitialized sent", 1)
 
     except Exception, e:
         _print_error("cannot send AckHierarchyInitialized (" + str(e) + ")")
@@ -304,6 +321,7 @@ def _got_data():
     try:
         raw_data = CONNECTION.readAll()
         if raw_data.isEmpty() is True:
+            _print_verbose("Raw data from CONNECTION is empty", 1)
             return
 
         json_data = str(raw_data)
@@ -316,6 +334,8 @@ def _process_data(arg):
     """
     We received a Json object. It may be a JointsStream or a Hierarchy
     """
+    _print_verbose(arg, 2)
+    
     try:
         data = json.loads(arg)
 
@@ -326,7 +346,7 @@ def _process_data(arg):
         else:
             _print_error("Unknown data type received: " + data['Type'])
     except ValueError:
-        # _print_error("received a non-Json object.")
+        _print_verbose("Received a non-Json object.", 1)
         return
     except Exception as e:
         _print_error("cannot process data (" + type(e).__name__ + ": " + str(e) +")")
@@ -348,8 +368,8 @@ def _process_hierarchy(hierarchy_data):
             maya_joints = [maya_joint for maya_joint in all_maya_joints if maya_joint.name() == joint_name]
             if maya_joints:
                 JOINTS_BUFFER[joint_name] = maya_joints
-
-        _send_ack_hierarchy_initialized()
+        
+        _send_ack_hierarchy_initialized()        
 
         # Print nb joints in Maya and nb joints in BUFFER for information purposes
         _print_success("mapped " + str(len(JOINTS_BUFFER)) + " maya joints out of " + str(len(all_maya_joints)))
@@ -366,6 +386,7 @@ def _process_joints_stream(joints_stream_data):
 
     try:
         joints_data = joints_stream_data["Joints"]
+        _print_verbose(joints_data, 3)
 
         for joint_data in joints_data:
             # We select all joints having the given name
@@ -388,8 +409,8 @@ def _process_joints_stream(joints_stream_data):
                         # Mosketch uses meters. Maya uses centimeters
                         translation *= 100
                         maya_joint.setTranslation(translation, space='transform')
-    except KeyError:
-        #_print_error("cannot find " + joint_name + " in maya")
-        pass
+    except KeyError as e:
+        _print_error("cannot find " + joint_name + " in maya")
+        return
     except Exception as e:
         _print_error("cannot process joints stream (" + type(e).__name__ + ": " + str(e) +")")
