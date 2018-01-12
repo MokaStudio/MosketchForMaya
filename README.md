@@ -19,6 +19,17 @@ mosketch_for_maya.install()
 ```
 Then press ![Execute Script](https://user-images.githubusercontent.com/7549728/28462913-d907f49c-6e1d-11e7-9b70-6c71b69b41e8.png) (at the top of the Script Editor) to execute it.
 
+__IMPORTANT:__ you may get the following errors while running the script:
+```python
+import mosketch_for_maya
+mosketch_for_maya.install();
+// Error: mosketch_for_maya.install(); // 
+// Error: Line 2.27: Syntax error //
+```
+That means that you are in a MEL console. Please switch to a Python console:
+
+![Python Console in Maya](https://user-images.githubusercontent.com/7549728/34869610-b8fb68c0-f787-11e7-9eea-083186c13be8.png)
+
 You should now have a new Shelf called ```MosketchForMaya``` containing two shelfButtons to __Start__ and __Stop__ the script:
 ![Mosketch for Maya ShelfButtons](https://user-images.githubusercontent.com/7549728/28462385-4e2b9998-6e1b-11e7-9df3-0918b764345d.png)
 
@@ -45,7 +56,7 @@ Mosketch for Maya GUI
 
 Now, if you move your character in [Mosketch&trade;](https://www.mokastudio.com), it should also move inside Maya.
 
-__WARNING: make sure you start streaming in Mosketch first.__
+__IMPORTANT:__ make sure you start streaming in Mosketch first.
 
 To Stop the ```MosketchForMaya``` Python script, press ![Stop Mosketch for Maya](https://user-images.githubusercontent.com/7549728/28462639-5588ad60-6e1c-11e7-9588-c3878a4c606d.png).
 
