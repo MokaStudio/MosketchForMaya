@@ -1,14 +1,44 @@
+# coding: utf-8 # Maya is using Python 2.7.x so we need to specify the encoding in either the first or the second line of the source file.
+"""
+<MIT License>
+Copyright © 2017-2018 by Moka Studio
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+The Software is provided “as is”, without warranty of any kind,
+express or implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose and noninfringement.
+In no event shall the authors or copyright holders be liable for any claim,
+damages or other liability, whether in an action of contract, tort or otherwise,
+arising from, out of or in connection with the software or
+the use or other dealings in the Software.
+</MIT License>
+"""
+
+from __future__ import unicode_literals
 """
 Mosketch for maya.
 See https://github.com/MokaStudio/MosketchForMaya for more informations.
+For developers you can check the following link:
+https://support.mokastudio.com/support/solutions/articles/6000198416-streaming-developer-documentation
 """
-import os
+
+import os, sys, locale
 
 import json
 
 import pymel.core as pmc
 import maya.OpenMayaUI as OpenMayaUI
 import maya.mel as mel
+import socket
 
 # Support for Qt4 and Qt5 depending on Maya version
 from Qt import QtCore
@@ -25,13 +55,44 @@ elif __binding__ in ('PySide', 'PyQt4'):
 else:
     _print_error("cannot find Qt bindings")
 
-# Global variables
+
+################################################################################
+##########          GLOBAL VARIABLES
+################################################################################
+SCRIPT_VER = "0.6"
 MAIN_WINDOW = None
-STATUS_TEXT = None
 CONNECTION = None
 IP = "127.0.0.1"
 MOSKETCH_PORT = 16094
+
+# Keys for Json packets
+JSON_KEY_TYPE = "Type"
+JSON_KEY_NAME = "Name"
+JSON_KEY_ANATOMIC = "Anatom"
+JSON_KEY_ROTATION = "R"
+JSON_KEY_TRANSLATION = "T"
+JSON_KEY_JOINTS = "Joints"
+JSON_KEY_OBJECT = "object"
+JSON_KEY_COMMAND = "command"
+JSON_KEY_PARAMETERS = "parameters"
+
+# Packet Type
+PACKET_TYPE_COMMAND = "MosketchCommand"
+
+# MAYA JOINTS BUFFERS
 JOINTS_BUFFER = {}
+JOINTS_INIT_ORIENT_INV_BUFFER = {}
+JOINTS_ROTATE_AXIS_INV_BUFFER = {}
+INTER_JOINTS_BUFFER = {}
+JOINTS_UUIDS = {}
+
+# Utils
+PI = 3.1415926535897932384626433832795
+RAD_2_DEG = 180.0 / PI
+
+# Verbose level (1 for critical informations, 3 to output all packets)
+VERBOSE = 1
+
 
 ################################################################################
 ##########          MAIN FUNCTIONS
@@ -52,11 +113,12 @@ def install():
     pmc.shelfButton(label='Start',
                     parent=shelf_layout, 
                     image1=start_icon_name, 
-                    command='import mosketch_for_maya;mosketch_for_maya.start()')
+                    command='import mosketch_for_maya;reload(mosketch_for_maya);mosketch_for_maya.start()')
     pmc.shelfButton(label='Stop',
                     parent=shelf_layout,
                     image1=stop_icon_name,
                     command='mosketch_for_maya.stop()')
+
 
 def start():
     """
@@ -66,80 +128,104 @@ def start():
     """
     _create_gui()
 
+
 def stop():
     """
     Call this function from Maya (in a shelf button or in script editor for example):
         mosketch_for_maya.stop()
     """
-    # Close connection if any is still opened
     if CONNECTION is not None:
         _close_connection()
 
     _destroy_gui()
+
+
+################################################################################
+##########          UI CLASS DEFINITION 
+################################################################################
+class UI_MosketchWindow(QtWidgets.QMainWindow):
+    def __init__(self, parent=None):
+        maya_window = _get_maya_main_window()
+        super(UI_MosketchWindow, self).__init__(maya_window)
+
+    def init_mosketch_ui(self):
+        self.setWindowTitle("Mosketch for Maya " + SCRIPT_VER)
+
+        content = QtWidgets.QWidget(MAIN_WINDOW)
+        main_layout = QtWidgets.QVBoxLayout(content)
+
+        help_text = QtWidgets.QLabel(content)
+        help_text.setWordWrap(True)
+
+        help_text.setText("""<br>
+        <b>Please read <a href='https://github.com/MokaStudio/MosketchForMaya' style=\"color: #F16521;\"> documentation</a> first.</b>
+        <br>""")
+        help_text.setOpenExternalLinks(True)
+
+        ip_label = QtWidgets.QLabel("IP", content)
+        ip_lineedit = QtWidgets.QLineEdit(content)
+        ip_lineedit.setText(IP)
+        ip_lineedit.textChanged.connect(_ip_text_changed)
+        ip_layout = QtWidgets.QHBoxLayout()
+        ip_layout.addWidget(ip_label)
+        ip_layout.addWidget(ip_lineedit)
+
+        buttons_layout = QtWidgets.QHBoxLayout()
+        connect_button = QtWidgets.QToolButton(content)
+        connect_button.setText("CONNECT")
+        connect_button.setAutoRaise(True)
+        connect_button.clicked.connect(_open_connection)
+        buttons_layout.addWidget(connect_button)
+        disconnect_button = QtWidgets.QToolButton(content)
+        disconnect_button.setText("DISCONNECT")
+        disconnect_button.setAutoRaise(True)
+        disconnect_button.clicked.connect(_close_connection)
+        buttons_layout.addWidget(disconnect_button)
+        update_mosketch_button = QtWidgets.QToolButton(content)
+        update_mosketch_button.setText("UPDATE MOSKETCH")
+        update_mosketch_button.setAutoRaise(True)
+        update_mosketch_button.clicked.connect(_update_mosketch)
+        buttons_layout.addWidget(update_mosketch_button)
+
+        spacer = QtWidgets.QSpacerItem(10, 20)
+
+        self.status_text = QtWidgets.QLabel(content)
+        self.status_text.setWordWrap(True)
+        self.status_text.setText("Not connected yet")
+
+        content.setLayout(main_layout)
+        main_layout.addWidget(help_text)
+        main_layout.addLayout(ip_layout)
+        main_layout.addLayout(buttons_layout)
+        self.setCentralWidget(content)
+        main_layout.addSpacerItem(spacer)
+        main_layout.addWidget(self.status_text)
+
+    def closeEvent(self, event):
+        if CONNECTION is not None:
+          _close_connection()
+
 
 ################################################################################
 ##########          GUI
 ################################################################################
 def _create_gui():
     global MAIN_WINDOW
-    global STATUS_TEXT
+    
+    MAIN_WINDOW = UI_MosketchWindow()
+    MAIN_WINDOW.init_mosketch_ui()
+    MAIN_WINDOW.show()    
 
-    maya_window = _get_maya_main_window()
-    MAIN_WINDOW = QtWidgets.QMainWindow(maya_window)
-    MAIN_WINDOW.setWindowTitle("Mosketch for Maya")
-
-    content = QtWidgets.QWidget(MAIN_WINDOW)
-    main_layout = QtWidgets.QVBoxLayout(content)
-
-    help_text = QtWidgets.QLabel(content)
-    help_text.setWordWrap(True)
-
-    help_text.setText("""<br>
-    <b>Please read <a href='https://github.com/MokaStudio/MosketchForMaya' style=\"color: #F16521;\"> documentation</a> first.</b>
-    <br>""")
-    help_text.setOpenExternalLinks(True)
-
-    ip_label = QtWidgets.QLabel("IP", content)
-    ip_lineedit = QtWidgets.QLineEdit(content)
-    ip_lineedit.setText(IP)
-    ip_lineedit.textChanged.connect(_ip_text_changed)
-    ip_layout = QtWidgets.QHBoxLayout()
-    ip_layout.addWidget(ip_label)
-    ip_layout.addWidget(ip_lineedit)
-
-    buttons_layout = QtWidgets.QHBoxLayout()
-    connect_button = QtWidgets.QToolButton(content)
-    connect_button.setText("CONNECT")
-    connect_button.clicked.connect(_open_connection)
-    buttons_layout.addWidget(connect_button)
-    disconnect_button = QtWidgets.QToolButton(content)
-    disconnect_button.setText("DISCONNECT")
-    disconnect_button.clicked.connect(_close_connection)
-    buttons_layout.addWidget(disconnect_button)
-    update_mosketch_button = QtWidgets.QToolButton(content)
-    update_mosketch_button.setText("UPDATE MOSKETCH")
-    update_mosketch_button.setCheckable(False)
-    update_mosketch_button.clicked.connect(_update_mosketch)
-    buttons_layout.addWidget(update_mosketch_button)
-
-    spacer = QtWidgets.QSpacerItem(10, 20)
-
-    STATUS_TEXT = QtWidgets.QLabel(content)
-    STATUS_TEXT.setWordWrap(True)
-    STATUS_TEXT.setText("Not connected yet")
-
-    content.setLayout(main_layout)
-    main_layout.addWidget(help_text)
-    main_layout.addLayout(ip_layout)
-    main_layout.addLayout(buttons_layout)
-    MAIN_WINDOW.setCentralWidget(content)
-    main_layout.addSpacerItem(spacer)
-    main_layout.addWidget(STATUS_TEXT)
-
-    MAIN_WINDOW.show()
+    _print_verbose(sys.version, 1)
+    _print_verbose(sys.getdefaultencoding(), 2)
+    _print_verbose(sys.getfilesystemencoding(), 2)
+    _print_verbose(sys.prefix, 2)
+    _print_verbose(locale.getdefaultlocale(), 2)
+    
 
 def _destroy_gui():
     MAIN_WINDOW.close()
+
 
 def _get_maya_main_window():
     OpenMayaUI.MQtUtil.mainWindow()
@@ -151,24 +237,26 @@ def _get_maya_main_window():
     assert isinstance(window, QtWidgets.QMainWindow)
     return window
 
+
 def _ip_text_changed(text):
     global IP
     IP = text
 
-# Helpers
-def _print_error(error):
-    global STATUS_TEXT
 
+################################################################################
+##########          HELPERS
+################################################################################
+def _print_error(error):
     error_msg = "ERROR: " + error
     print error_msg
-    STATUS_TEXT.setText(error_msg)
+    MAIN_WINDOW.status_text.setText(error_msg)
+
 
 def _print_success(success):
-    global STATUS_TEXT
-
     success_msg = "SUCCESS: " + success
     print success_msg
-    STATUS_TEXT.setText(success_msg)
+    MAIN_WINDOW.status_text.setText(success_msg)
+
 
 def _print_encoding(string):
     if isinstance(string, str):
@@ -178,31 +266,60 @@ def _print_encoding(string):
     else:
         print "not a recognized string encoding"
 
-# Verbose level
-VERBOSE = 0
-
 def _print_verbose(msg, verbose_level):
     global VERBOSE
     if verbose_level <= VERBOSE:
         print(msg)
 
+
+def _quat_as_euler_angles(quat):
+    """
+    Take a quaternion and return the corresponding Euler angles in degrees
+    """
+    vec = quat.asEulerRotation()
+    vec = vec * RAD_2_DEG
+    return vec
+
+
+def _print_quat_as_euler_angles(name, quat):
+    vec = _quat_as_euler_angles(quat)
+    print name + '= ' + str(vec[0]) + ' ' + str(vec[1]) + ' ' + str(vec[2])
+
+
+def _is_valid_ipv4_address(address):
+    try:
+        socket.inet_pton(socket.AF_INET, address)
+    except AttributeError:  # no inet_pton here, sorry
+        try:
+            socket.inet_aton(address)
+        except socket.error:
+            return False
+        return address.count('.') == 3
+    except socket.error:  # not a valid address
+        return False
+    return True
+
+
 ################################################################################
 ##########          CONNECTION
 ################################################################################
 def _get_connection_name():
-    global IP
-    global MOSKETCH_PORT
-
     return IP + ":" + str(MOSKETCH_PORT)
+
 
 def _open_connection():
     global CONNECTION
-    global IP
-    global MOSKETCH_PORT
 
     if CONNECTION is not None:
         _print_error("connection is already opened.")
         return
+
+    # Test IP format
+    if _is_valid_ipv4_address(IP) == False:
+        _print_error('IP address looks wrong, please enter a valid IP address')
+        return
+    else:
+        _print_success('Connecting to ' + IP)
 
     # Try to connect
     CONNECTION = QtNetwork.QTcpSocket(MAIN_WINDOW)
@@ -211,11 +328,14 @@ def _open_connection():
     CONNECTION.connected.connect(_connected)
     CONNECTION.disconnected.connect(_disconnected)
 
-    print "Trying to connect to " + _get_connection_name()
     CONNECTION.connectToHost(IP, MOSKETCH_PORT)
+
 
 def _close_connection():
     global CONNECTION
+    global JOINTS_BUFFER
+    global JOINTS_INIT_ORIENT_INV_BUFFER
+    global JOINTS_ROTATE_AXIS_INV_BUFFER
 
     if CONNECTION is None:
         _print_error("connection is already closed.")
@@ -224,9 +344,13 @@ def _close_connection():
     CONNECTION.close()
     CONNECTION = None
     JOINTS_BUFFER = {}
+    JOINTS_INIT_ORIENT_INV_BUFFER = {}
+    JOINTS_ROTATE_AXIS_INV_BUFFER = {}
+
 
 def _connected():
     _print_success("connection opened on " + _get_connection_name())
+
 
 def _disconnected():
     global CONNECTION
@@ -236,6 +360,7 @@ def _disconnected():
     if CONNECTION is not None:
         CONNECTION.close() # Just in case
         CONNECTION = None
+
 
 def _got_error(socket_error):
     global CONNECTION
@@ -249,6 +374,7 @@ def _got_error(socket_error):
     if socket_error == QtNetwork.QTcpSocket.ConnectionRefusedError:
         CONNECTION = None
 
+
 ################################################################################
 ##########          SEND
 ################################################################################
@@ -261,35 +387,36 @@ def _update_mosketch():
     if CONNECTION is None:
         _print_error("Mosketch is not connected!")
         return
+
     # For every joint, pack data, then send packet
     try:
         quat = pmc.datatypes.Quaternion()
         joints_buffer_values = JOINTS_BUFFER.values()
         joints_stream = {}
-        joints_stream['Type'] = "JointsStream"
-        joints_stream['Joints'] = []
-        for maya_joints in joints_buffer_values:
-            for maya_joint in maya_joints:
-                joint_data = {} # Reinit it
-                joint_data['Name'] = maya_joint.name()
+        joints_stream[JSON_KEY_TYPE] = "JointsStream"
+        joints_stream[JSON_KEY_JOINTS] = []
+        for maya_joint in joints_buffer_values:
+            joint_data = {} # Reinit it
+            joint_name = maya_joint.name()
 
-                # W = [S] * [RO] * [R] * [JO] * [IS] * [T]
-                quat = maya_joint.getRotation(space='transform', quaternion=True)
-                vRO = maya_joint.getRotateAxis()
-                RO = pmc.datatypes.EulerRotation(vRO[0], vRO[1], vRO[2]).asQuaternion()
-                joint_orient = maya_joint.getOrientation()
-                quat = RO * quat * joint_orient
-                joint_data['LocalRotation'] = [quat[0], quat[1], quat[2], quat[3]]
+            joint_data[JSON_KEY_NAME] = joint_name # Fill the Json key for the name
 
-                translation = maya_joint.getTranslation(space='transform')
-                translation *= 0.01
-                joint_data['LocalTranslation'] = [translation[0], translation[1], translation[2]]
-                joints_stream['Joints'].append(joint_data)
+            # W = [S] * [RO] * [R] * [JO] * [IS] * [T]
+            rotate_axis = JOINTS_ROTATE_AXIS_INV_BUFFER[joint_name].inverse()
+            joint_orient = JOINTS_INIT_ORIENT_INV_BUFFER[joint_name].inverse()
+            quat = maya_joint.getRotation(space='transform', quaternion=True)
+            quat = rotate_axis * quat * joint_orient
+            joint_data[JSON_KEY_ROTATION] = [quat[0], quat[1], quat[2], quat[3]]
 
+            translation = maya_joint.getTranslation(space='transform')
+            translation *= 0.01 # Mosketch uses meters. Maya uses centimeters
+            joint_data[JSON_KEY_TRANSLATION] = [translation[0], translation[1], translation[2]]
+            joints_stream[JSON_KEY_JOINTS].append(joint_data)
         json_data = json.dumps(joints_stream)
         CONNECTION.write(json_data)
     except Exception, e:
         _print_error("cannot send joint value (" + str(e) + ")")
+
 
 def _send_ack_hierarchy_initialized():
     '''
@@ -301,25 +428,64 @@ def _send_ack_hierarchy_initialized():
         return
     try:
         ack_packet = {}
-        ack_packet['Type'] = "AckHierarchyInitialized"
-        json_data = json.dumps(ack_packet)
+        ack_packet[JSON_KEY_TYPE] = "AckHierarchyInitialized"
+        json_data = json.dumps([ack_packet])
         CONNECTION.write(json_data)
+        CONNECTION.flush()
         _print_verbose("AckHierarchyInitialized sent", 1)
 
     except Exception, e:
         _print_error("cannot send AckHierarchyInitialized (" + str(e) + ")")
+
+
+def _send_ack_uuids_received():
+    '''
+    We send an acknowlegment to let Mosketch know we received all joint's Uuids.
+    '''
+    # Useless to prepare the data if we have no connection
+    if CONNECTION is None:
+        _print_error("Mosketch is not connected!")
+        return
+    try:
+        ack_packet = {}
+        ack_packet[JSON_KEY_TYPE] = "JointsUuidsAck"
+        json_data = json.dumps([ack_packet])
+        CONNECTION.write(json_data)
+        CONNECTION.flush()
+        _print_verbose("_send_ack_uuids_received sent", 1)
+
+    except Exception, e:
+        _print_error("cannot send Uuids ack (" + str(e) + ")")
+
+
+def _send_ack_jointstream_received():
+    '''
+    We send an acknowlegment to let Mosketch know that we received JointsStream.
+    '''
+    # Useless to prepare the data if we have no connection
+    if CONNECTION is None:
+        _print_error("Mosketch is not connected!")
+        return
+    try:
+        ack_packet = {}
+        ack_packet[JSON_KEY_TYPE] = "JointsStreamAck"
+        json_data = json.dumps(ack_packet)
+        CONNECTION.write(json_data)
+
+    except Exception, e:
+        _print_error("cannot send JointsStreamAck (" + str(e) + ")")
 
 ################################################################################
 ##########          RECEIVE
 ################################################################################
 def _got_data():
     """
-    We may receive different types of data:
-        - Type == "Hierarchy" => Initialize skeleton
-        - Type == "JointsStream" => Copy paste received values on Maya's joints
+    A packet is ready to read in the socket.
+    Read it and process it.
     """
     try:
-        raw_data = CONNECTION.readAll()
+        raw_data = CONNECTION.readLine()
+        
         if raw_data.isEmpty() is True:
             _print_verbose("Raw data from CONNECTION is empty", 1)
             return
@@ -330,87 +496,193 @@ def _got_data():
     except Exception as e:
         _print_error("cannot read received data (" + type(e).__name__ + ": " + str(e) +")")
 
+
 def _process_data(arg):
     """
-    We received a Json object. It may be a JointsStream or a Hierarchy
+    We received a Json object. It may be a JointsStream, a Hierarchy or a JointsUuids
     """
+    size = str(sys.getsizeof(arg))
+    _print_verbose("Paquet size:" + size, 2)
     _print_verbose(arg, 2)
     
     try:
         data = json.loads(arg)
 
-        if data['Type'] == "Hierarchy":
+        if data[JSON_KEY_TYPE] == "Hierarchy":
             _process_hierarchy(data)
-        elif data['Type'] == "JointsStream":
+        elif data[JSON_KEY_TYPE] == "JointsStream":
             _process_joints_stream(data)
+        elif data[JSON_KEY_TYPE] == "JointsUuids":
+            _process_joints_uuids(data)
         else:
-            _print_error("Unknown data type received: " + data['Type'])
+            _print_error("Unknown data type received: " + data[JSON_KEY_TYPE])
     except ValueError:
-        _print_verbose("Received a non-Json object.", 1)
+        _print_verbose("Received a non-Json object." + sys.exc_info()[0] + sys.exc_info()[1], 1)
         return
     except Exception as e:
         _print_error("cannot process data (" + type(e).__name__ + ": " + str(e) +")")
 
+
 def _process_hierarchy(hierarchy_data):
     global JOINTS_BUFFER
+    global JOINTS_INIT_ORIENT_INV_BUFFER
+    global JOINTS_ROTATE_AXIS_INV_BUFFER
 
     try:
-        # First empty JOINT_BUFFER
+        # First empty JOINTS_BUFFER
         JOINTS_BUFFER = {}
+        JOINTS_INIT_ORIENT_INV_BUFFER = {}
+        JOINTS_ROTATE_AXIS_INV_BUFFER = {}
 
-        # Retrieve all joints from Maya
+        # Retrieve all joints from Maya and Transforms (we may be streaming to controllers too)
         all_maya_joints = pmc.ls(type="joint")
+        all_maya_transform = pmc.ls(type="transform")
 
         # Then from all joints in the hierarchy, lookup in maya joints
-        joints_name = hierarchy_data["Joints"]
+        joints_name = hierarchy_data[JSON_KEY_JOINTS]
 
         for joint_name in joints_name:
-            maya_joints = [maya_joint for maya_joint in all_maya_joints if maya_joint.name() == joint_name]
-            if maya_joints:
-                JOINTS_BUFFER[joint_name] = maya_joints
-        
-        _send_ack_hierarchy_initialized()        
+            # We store joints by mapping them in our buffers
+            maya_real_joints = [maya_joint for maya_joint in all_maya_joints if maya_joint.name() == joint_name]
+            if maya_real_joints:
+                # We should have one Maya joint mapped anyways
+                if len(maya_real_joints) != 1:
+                    _print_error("We should have 1 Maya joint mapped only. Taking the first one only.")                
+                _map_joint(joint_name, maya_real_joints[0])
+
+        # If no mapping close connection
+        if (len(JOINTS_BUFFER) == 0):
+            _close_connection()
+            _print_error("Couldn't map joints. Check Maya's namespaces maybe.")
+            return
+
+        # Now tell Mosketch the mapping has gone well
+        _send_ack_hierarchy_initialized()
 
         # Print nb joints in Maya and nb joints in BUFFER for information purposes
-        _print_success("mapped " + str(len(JOINTS_BUFFER)) + " maya joints out of " + str(len(all_maya_joints)))
+        _print_success("mapped " + str(len(JOINTS_BUFFER)) + " maya joints out of " + str(len(all_maya_transform)))
+        _print_success("Buffers size: " + str(len(JOINTS_BUFFER)) + " / " + str(len(JOINTS_ROTATE_AXIS_INV_BUFFER)) + " / " + str(len(JOINTS_INIT_ORIENT_INV_BUFFER)))
 
     except Exception as e:
         _print_error("cannot process hierarchy data (" + type(e).__name__ + ": " + str(e) +")")
+
+
+def _map_joint(mosketch_name, maya_joint):
+    global JOINTS_BUFFER
+    global JOINTS_INIT_ORIENT_INV_BUFFER
+    global JOINTS_ROTATE_AXIS_INV_BUFFER
+
+    JOINTS_BUFFER[mosketch_name] = maya_joint
+    vRO = maya_joint.getRotateAxis()
+    rotate_axis = pmc.datatypes.EulerRotation(vRO[0], vRO[1], vRO[2]).asQuaternion()
+    JOINTS_ROTATE_AXIS_INV_BUFFER[mosketch_name] = rotate_axis.inverse()
+    try:
+        # We have a Joint => Get joint_orient into account
+        joint_orient = maya_joint.getOrientation()
+        JOINTS_INIT_ORIENT_INV_BUFFER[mosketch_name] = joint_orient.inverse()
+    except Exception:
+        # We have a Transform => Do NOT get joint_orient into account but the initial transform instead
+        joint_rotation = maya_joint.getRotation(space='transform', quaternion=True)
+        JOINTS_INIT_ORIENT_INV_BUFFER[mosketch_name] = joint_rotation.inverse()
+        _print_verbose("WARNING: we have a controller while we should have a joint: " + mosketch_name + " - " + maya_joint.name(), 1)
+
+
+def _process_joints_uuids(data):
+    _print_verbose("_process_joints_uuids", 1)
+    global JOINTS_UUIDS
+
+    try:
+        joints_data = data[JSON_KEY_JOINTS]
+        _print_verbose(joints_data, 3)
+
+        for joint_data in joints_data:
+            for name in joint_data:
+                JOINTS_UUIDS[name] = joint_data[name]
+    except Exception as e:
+        _print_error("cannot process joints uuids (" + type(e).__name__ + ": " + str(e) +")")
+
+    _print_verbose("Total uuids: " + str(len(JOINTS_UUIDS)), 1)
+    if (len(JOINTS_UUIDS) > 0):
+        _send_ack_uuids_received()
+
 
 def _process_joints_stream(joints_stream_data):
     '''
     We receive "full" local rotations and local translations.
     So we need to substract rotate axis and joint orient.
     '''
-    global JOINTS_BUFFER
-
     try:
-        joints_data = joints_stream_data["Joints"]
+        joints_data = joints_stream_data[JSON_KEY_JOINTS]
         _print_verbose(joints_data, 3)
 
         for joint_data in joints_data:
             # We select all joints having the given name
-            joint_name = joint_data['Name']
-            maya_joints = JOINTS_BUFFER[joint_name]
+            joint_name = joint_data[JSON_KEY_NAME]
+            try:
+                maya_joint = JOINTS_BUFFER[joint_name]
+            except KeyError:
+                continue
 
-            if maya_joints:
-                for maya_joint in maya_joints:
-                    # W = [S] * [RO] * [R] * [JO] * [IS] * [T]
-                    quat = pmc.datatypes.Quaternion(joint_data['LocalRotation'])                
-                    vRO = maya_joint.getRotateAxis()
-                    RO = pmc.datatypes.EulerRotation(vRO[0], vRO[1], vRO[2]).asQuaternion()
-                    joint_orient = maya_joint.getOrientation()
-                    quat = RO.inverse() * quat * joint_orient.inverse()
-                    maya_joint.setRotation(quat, space='transform')
+            if maya_joint:
+                # W = [S] * [RO] * [R] * [JO] * [IS] * [T]
+                quat = pmc.datatypes.Quaternion(joint_data[JSON_KEY_ROTATION])
+                rotate_axis_inv = JOINTS_ROTATE_AXIS_INV_BUFFER[joint_name]
+                joint_orient_inv = JOINTS_INIT_ORIENT_INV_BUFFER[joint_name]
+                quat = rotate_axis_inv * quat * joint_orient_inv
+                maya_joint.setRotation(quat, space='transform')
+                
+                joint_type = joint_data[JSON_KEY_ANATOMIC]                
+                if joint_type == 7: # This is a 6 DoFs joint so consider translation part too
+                    trans = pmc.datatypes.Vector(joint_data[JSON_KEY_TRANSLATION])
+                    trans = trans.rotateBy(rotate_axis_inv)
+                    # Mosketch uses meters. Maya uses centimeters
+                    trans *= 100
+                    maya_joint.setTranslation(trans, space='transform')
 
-                    joint_type = joint_data["AnatomicalType"]
-                    if joint_type == 7: # This is a 6 DoFs joint so consider translation part too
-                        translation = pmc.datatypes.Vector(joint_data["LocalTranslation"])
-                        # Mosketch uses meters. Maya uses centimeters
-                        translation *= 100
-                        maya_joint.setTranslation(translation, space='transform')
+        _send_ack_jointstream_received()
     except KeyError as e:
         _print_error("cannot find " + joint_name + " in maya")
         return
     except Exception as e:
         _print_error("cannot process joints stream (" + type(e).__name__ + ": " + str(e) +")")
+
+
+################################################################################
+##########          MOSKETCH COMMANDS
+################################################################################
+"""
+  For developers you can check the following link:
+  https://support.mokastudio.com/support/solutions/articles/6000198416-streaming-developer-documentation
+"""
+
+def _send_command_joint_orientation(orient_mode):
+    packet = {}
+    packet[JSON_KEY_TYPE] = PACKET_TYPE_COMMAND
+    packet[JSON_KEY_OBJECT] = 'scene'
+    packet[JSON_KEY_COMMAND] = 'setStreamingJointOrientMode'
+
+    jsonObj = {}
+    jsonObj['jointOrientMode'] = str(orient_mode)
+    packet[JSON_KEY_PARAMETERS] = jsonObj
+
+    json_data = json.dumps([packet])
+    CONNECTION.write(json_data)
+    CONNECTION.flush()
+    _print_verbose("_send_command_joint_orientation", 1)
+
+
+def _send_command_joint_space(space_mode):
+    packet = {}
+    packet[JSON_KEY_TYPE] = PACKET_TYPE_COMMAND
+    packet['object'] = 'scene'
+    packet['command'] = 'setStreamingJointSpace'
+
+    jsonObj = {}
+    jsonObj['jointSpace'] = space_mode
+    packet[JSON_KEY_PARAMETERS] = jsonObj
+
+    json_data = json.dumps([packet])
+    CONNECTION.write(json_data)
+    CONNECTION.flush()
+    _print_verbose("_send_command_joint_space", 1)
+
