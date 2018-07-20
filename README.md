@@ -39,10 +39,6 @@ Follow these steps to start streaming from [Mosketch&trade;](https://www.mokastu
 __In [Mosketch&trade;](https://www.mokastudio.com):__ 
 1. Import your character
 2. Start streaming [(see online help)](http://support.mokastudio.com/support/solutions/articles/6000176455-streaming)
-<p align="center">
-<img src="https://user-images.githubusercontent.com/7549728/28783613-28d67980-7611-11e7-9bd2-ef00740a1907.png" /><br>
-Streaming Properties in Mosketch
-</p>
 
 __In Maya:__
 1. Import your character
