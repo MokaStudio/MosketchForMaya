@@ -10,7 +10,7 @@ Please note that the main purpose is to keep the script as short and simple as p
 ## Installation
 First, download and uncompress [MosketchForMaya-master.zip](https://github.com/MokaStudio/MosketchForMaya/archive/master.zip). Then copy all files into your local scripts folder:
 * __Windows:__ ```<My Documents>\maya\scripts```
-* __MacOSX:__ ```/Users/Shared/Autodesk/maya/scripts/```
+* __MacOSX:__ ```/Users/<username>/Library/Preferences/Autodesk/maya/scripts/```
 
 Then, open Maya's [script editor](https://knowledge.autodesk.com/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2017/ENU/Maya/files/GUID-7C861047-C7E0-4780-ACB5-752CD22AB02E-htm.html) and copy-paste the following script in a Python console tab:
 ```python
