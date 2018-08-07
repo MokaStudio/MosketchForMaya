@@ -33,6 +33,8 @@ https://support.mokastudio.com/support/solutions/articles/6000198416-streaming-d
 
 import os, sys, locale
 
+import platform
+
 import json
 
 import pymel.core as pmc
@@ -110,6 +112,8 @@ def install():
     shelf_layout = pmc.shelfLayout(shelf_name, parent=top_level_shelf_layout)
     start_icon_name = os.path.dirname(os.path.abspath(__file__)) + "/start.png"
     stop_icon_name = os.path.dirname(os.path.abspath(__file__)) + "/stop.png"
+    load_mosko_icon_name = os.path.dirname(os.path.abspath(__file__)) + "/load_mosko.png"
+    load_mokto_icon_name = os.path.dirname(os.path.abspath(__file__)) + "/load_mokto.png"
     pmc.shelfButton(label='Start',
                     parent=shelf_layout, 
                     image1=start_icon_name, 
@@ -118,7 +122,14 @@ def install():
                     parent=shelf_layout,
                     image1=stop_icon_name,
                     command='mosketch_for_maya.stop()')
-
+    pmc.shelfButton(label='Load Mosko',
+                    parent=shelf_layout,
+                    image1=load_mosko_icon_name,
+                    command='import mosketch_for_maya;reload(mosketch_for_maya);mosketch_for_maya.load_mosko()')
+    pmc.shelfButton(label='Load Mokto',
+                    parent=shelf_layout,
+                    image1=load_mokto_icon_name,
+                    command='import mosketch_for_maya;reload(mosketch_for_maya);mosketch_for_maya.load_mokto()')
 
 def start():
     """
@@ -138,6 +149,24 @@ def stop():
         _close_connection()
 
     _destroy_gui()
+
+
+def load_mosko():
+    """
+    Load Mosko FBX file
+    """
+    characters_base_dir = _get_characters_base_dir()
+    mosko_absolute_file_path = characters_base_dir + "003_Mosko.fbx"
+    pmc.system.importFile(mosko_absolute_file_path)
+
+
+def load_mokto():
+    """
+    Load Mokto FBX file
+    """
+    characters_base_dir = _get_characters_base_dir()
+    mokto_absolute_file_path = characters_base_dir + "004_Mokto.fbx"
+    pmc.system.importFile(mokto_absolute_file_path)
 
 
 ################################################################################
@@ -298,6 +327,19 @@ def _is_valid_ipv4_address(address):
     except socket.error:  # not a valid address
         return False
     return True
+
+def _get_characters_base_dir():
+    characters_base_dir = ""
+    current_platform = platform.system()
+
+    if current_platform == "Windows":
+        characters_base_dir = os.environ['MOKA_DIR']
+    elif current_platform == "Darwin": # This will anyway not going to work because of translocation done by MacOSX by default
+        characters_base_dir = "/Applications/"
+
+    characters_base_dir = characters_base_dir + "Mosketch/Data/Characters/"
+
+    return characters_base_dir
 
 
 ################################################################################
