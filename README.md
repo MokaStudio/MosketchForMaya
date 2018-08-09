@@ -30,7 +30,7 @@ That means that you are in a MEL console. Please switch to a Python console:
 
 ![Python Console in Maya](https://user-images.githubusercontent.com/7549728/34869610-b8fb68c0-f787-11e7-9eea-083186c13be8.png)
 
-You should now have a new Shelf called ```MosketchForMaya``` containing several shelfButtons to __Start__, __Stop__, __Load Mosko__ and __Load Mokto__.
+You should now have a new Shelf called ```MosketchForMaya``` containing several shelfButtons to __Start__, __Stop__, __Load Mosko__ and __Load Okto__.
 
 ## Streaming
 Follow these steps to start streaming from [Mosketch&trade;](https://www.mokastudio.com) to Maya.
