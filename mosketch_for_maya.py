@@ -113,7 +113,7 @@ def install():
     start_icon_name = os.path.dirname(os.path.abspath(__file__)) + "/start.png"
     stop_icon_name = os.path.dirname(os.path.abspath(__file__)) + "/stop.png"
     load_mosko_icon_name = os.path.dirname(os.path.abspath(__file__)) + "/load_mosko.png"
-    load_mokto_icon_name = os.path.dirname(os.path.abspath(__file__)) + "/load_mokto.png"
+    load_okto_icon_name = os.path.dirname(os.path.abspath(__file__)) + "/load_okto.png"
     pmc.shelfButton(label='Start',
                     parent=shelf_layout, 
                     image1=start_icon_name, 
@@ -126,10 +126,10 @@ def install():
                     parent=shelf_layout,
                     image1=load_mosko_icon_name,
                     command='import mosketch_for_maya;reload(mosketch_for_maya);mosketch_for_maya.load_mosko()')
-    pmc.shelfButton(label='Load Mokto',
+    pmc.shelfButton(label='Load Okto',
                     parent=shelf_layout,
-                    image1=load_mokto_icon_name,
-                    command='import mosketch_for_maya;reload(mosketch_for_maya);mosketch_for_maya.load_mokto()')
+                    image1=load_okto_icon_name,
+                    command='import mosketch_for_maya;reload(mosketch_for_maya);mosketch_for_maya.load_okto()')
 
 def start():
     """
@@ -160,13 +160,13 @@ def load_mosko():
     pmc.system.importFile(mosko_absolute_file_path)
 
 
-def load_mokto():
+def load_okto():
     """
-    Load Mokto FBX file
+    Load Okto FBX file
     """
     characters_base_dir = _get_characters_base_dir()
-    mokto_absolute_file_path = characters_base_dir + "004_Mokto.fbx"
-    pmc.system.importFile(mokto_absolute_file_path)
+    okto_absolute_file_path = characters_base_dir + "004_Okto.fbx"
+    pmc.system.importFile(okto_absolute_file_path)
 
 
 ################################################################################
