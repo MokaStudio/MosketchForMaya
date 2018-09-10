@@ -54,6 +54,9 @@ __IMPORTANT:__ make sure you start streaming in Mosketch first.
 
 To Stop the ```MosketchForMaya``` Python script, press ![Stop Mosketch for Maya](https://user-images.githubusercontent.com/7549728/28462639-5588ad60-6e1c-11e7-9588-c3878a4c606d.png).
 
+## Limitations
+Currently, this script only stream joint values directly on joints. FK controllers and rig are not supported for the moment.
+
 ## [Mosketch&trade;](https://www.mokastudio.com)
 [Mosketch&trade;](https://www.mokastudio.com) enables the artists to instantly animate any 3D characters - a humanoid, a dog, a dragon, a  tree, anything - simply by sketching or dragging its joints. 
 Thanks to [Mosketch&trade;](https://www.mokastudio.com), the artists can now create 3D animations in an easy, fast, and intuitive way.
