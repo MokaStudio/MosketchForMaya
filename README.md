@@ -54,6 +54,8 @@ __IMPORTANT:__ make sure you start streaming in Mosketch first.
 
 To Stop the ```MosketchForMaya``` Python script, press ![Stop Mosketch for Maya](https://user-images.githubusercontent.com/7549728/28462639-5588ad60-6e1c-11e7-9588-c3878a4c606d.png).
 
+__REMARK:__ you can connect several Maya instances to Mosketch. That way, it is possible to stream animation from Mosketch to several Maya instances in parallel. This also allows to synchronise several Maya instances using Mosketch as a gateway.
+
 ## Limitations
 * Currently, this script only streams joints values directly on joints. Streaming on FK controllers and rigs is not supported for the moment.
 * Realtime streaming is only supported from Mosketch to Maya. From Maya to Mosketch, you need to click the "UPDATE MOSKETCH" button.
