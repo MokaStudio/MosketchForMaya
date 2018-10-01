@@ -22,8 +22,9 @@ Then press ![Execute Script](https://user-images.githubusercontent.com/7549728/2
 __IMPORTANT:__ you may get the following errors while running the script:
 ```python
 import mosketch_for_maya
-mosketch_for_maya.install();
-// Error: mosketch_for_maya.install(); // 
+mosketch_for_maya.install()
+
+// Error: mosketch_for_maya.install() // 
 // Error: Line 2.27: Syntax error //
 ```
 That means that you are in a MEL console. Please switch to a Python console:
