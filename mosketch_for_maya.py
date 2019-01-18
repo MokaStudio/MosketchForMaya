@@ -57,7 +57,7 @@ else:
 ################################################################################
 ##########          GLOBAL VARIABLES
 ################################################################################
-SCRIPT_VER = "0.17.5"
+SCRIPT_VER = "0.18"
 MAIN_WINDOW = None
 CONNECTION = None
 IP = "127.0.0.1"
@@ -103,6 +103,8 @@ VERBOSE = 1
 
 STREAMING_MODE = "Joints"
 
+# Large packets sent over the LAN may be split. So use a buffer to reconstruct them
+SOCKET_DATA_BUFFER = ""
 
 ################################################################################
 ##########          MAIN FUNCTIONS
@@ -193,16 +195,20 @@ def load_mosko_humanik():
 ################################################################################
 ##########          UI CLASS DEFINITION 
 ################################################################################
-class UI_MosketchWindow(QtWidgets.QMainWindow):
+class UI_MosketchWindow(QtWidgets.QDialog):
     def __init__(self, parent=None):
         maya_window = _get_maya_main_window()
-        super(UI_MosketchWindow, self).__init__(maya_window)
+        super(UI_MosketchWindow, self).__init__(maya_window, QtCore.Qt.WindowStaysOnTopHint)
 
     def init_mosketch_ui(self):
         self.setWindowTitle("Mosketch for Maya " + SCRIPT_VER)
 
         content = QtWidgets.QWidget(MAIN_WINDOW)
         main_layout = QtWidgets.QVBoxLayout(content)
+        minWidth = 320
+        minHeight = 200
+        self.setMinimumSize(minWidth, minHeight)
+        self.resize(minWidth, minHeight)
 
         help_text = QtWidgets.QLabel(content)
         help_text.setWordWrap(True)
@@ -216,6 +222,7 @@ class UI_MosketchWindow(QtWidgets.QMainWindow):
         ip_lineedit = QtWidgets.QLineEdit(content)
         ip_lineedit.setText(IP)
         ip_lineedit.textChanged.connect(_ip_text_changed)
+        ip_lineedit.returnPressed.connect(_open_connection)
         ip_layout = QtWidgets.QHBoxLayout()
         ip_layout.addWidget(ip_label)
         ip_layout.addWidget(ip_lineedit)
@@ -253,16 +260,22 @@ class UI_MosketchWindow(QtWidgets.QMainWindow):
 
         self.status_text = QtWidgets.QLabel(content)
         self.status_text.setWordWrap(True)
-        self.status_text.setText("Not connected yet")
+        self.status_text.setAlignment(QtCore.Qt.AlignCenter);
+        self.status_text.setText("NOT CONNECTED")
+        self.status_text.setStyleSheet("QLabel { background-color : red;color:white;font-weight: bold;}");
+
+        self.log_text = QtWidgets.QLabel(content)
+        self.log_text.setWordWrap(True)
+        self.log_text.setText("")
 
         content.setLayout(main_layout)
         main_layout.addWidget(help_text)
         main_layout.addLayout(ip_layout)
         main_layout.addLayout(streaming_mode_layout)
         main_layout.addLayout(buttons_layout)
-        self.setCentralWidget(content)
         main_layout.addSpacerItem(spacer)
         main_layout.addWidget(self.status_text)
+        main_layout.addWidget(self.log_text)
 
     def closeEvent(self, event):
         # Close connection if any is still opened
@@ -346,12 +359,16 @@ def _open_connection():
     CONNECTION.connected.connect(_connected)
     CONNECTION.disconnected.connect(_disconnected)
 
+    MAIN_WINDOW.status_text.setText("CONNECTING...")
+    MAIN_WINDOW.status_text.setStyleSheet("QLabel { background-color : orange;;color:white;font-weight: bold;}")
+
     print "Trying to connect to " + _get_connection_name()
     CONNECTION.connectToHost(IP, PORT)
 
 
 def _close_connection():
     global CONNECTION
+    global SOCKET_DATA_BUFFER
     global JOINTS_BUFFER
     global JOINTS_INIT_ORIENT_INV_BUFFER
     global JOINTS_ROTATE_AXIS_INV_BUFFER
@@ -363,6 +380,8 @@ def _close_connection():
         _print_error("connection is already closed.")
         return
 
+    SOCKET_DATA_BUFFER = ""
+    CONNECTION.flush()
     CONNECTION.close()
     CONNECTION = None
 
@@ -377,14 +396,22 @@ def _close_connection():
 
 def _connected():
     _print_success("connection opened on " + _get_connection_name())
-
+    MAIN_WINDOW.status_text.setText("CONNECTED")
+    MAIN_WINDOW.status_text.setStyleSheet("QLabel { background-color : green;color:white;font-weight: bold;}")
 
 def _disconnected():
     global CONNECTION
+    global SOCKET_DATA_BUFFER
 
     _print_success("connection closed on " + _get_connection_name())
+    MAIN_WINDOW.status_text.setText("NOT CONNECTED")
+    MAIN_WINDOW.status_text.setStyleSheet("QLabel { background-color : red;color:white;font-weight: bold;}")
 
+
+# FIXME: should we put that in _close_connection instead???
     if CONNECTION is not None:
+        SOCKET_DATA_BUFFER = ""
+        CONNECTION.flush()
         CONNECTION.close() # Just in case
         CONNECTION = None
 
@@ -392,14 +419,16 @@ def _disconnected():
 def _got_error(socket_error):
     global CONNECTION
 
+    MAIN_WINDOW.status_text.setText("NOT CONNECTED")
+    MAIN_WINDOW.status_text.setStyleSheet("QLabel { background-color : red;color:white;font-weight: bold;}");
+
     try:
         err_msg = CONNECTION.errorString()
         _print_error(err_msg)
     except Exception:
         _print_error("connection is not opened yet.")
 
-    if socket_error == QtNetwork.QTcpSocket.ConnectionRefusedError:
-        CONNECTION = None
+    CONNECTION = None
 
 
 ################################################################################
@@ -410,19 +439,24 @@ def _got_data():
     A packet is ready to read in the socket.
     Read it and process it.
     """
+    global SOCKET_DATA_BUFFER
     try:
         raw_data = CONNECTION.readLine()
         
         if raw_data.isEmpty() is True:
             _print_verbose("Raw data from CONNECTION is empty", 1)
             return
-
-        json_data = str(raw_data)
+        SOCKET_DATA_BUFFER += raw_data
+        json_data = str(SOCKET_DATA_BUFFER)
         _process_data(json_data)
 
-    except Exception as e:
-        _print_error("cannot read received data (" + type(e).__name__ + ": " + str(e) +")")
+        # Processing went fine, clear socket buffer
+        SOCKET_DATA_BUFFER = ""
 
+    except Exception as e:
+        pass
+        # Packet is just split. Ignore and go on
+        #_print_error("cannot read received data (" + type(e).__name__ + ": " + str(e) +")")
 
 def _process_data(arg):
     """
@@ -457,7 +491,7 @@ def _process_data(arg):
                 _send_command_jointSpace("Parent")
 
             # We are done, send acknowledgement
-            _send_ack_hierarchy_initialized()
+            _send_hierarchy_initialized_ack()
 
         elif data[JSON_KEY_TYPE] == "JointsStream":
             if (STREAMING_MODE ==  "Controllers"):
@@ -469,6 +503,7 @@ def _process_data(arg):
 
         elif data[JSON_KEY_TYPE] == "JointsUuids":
             _process_joints_uuids(data)
+            _send_joint_uuids_received_ack()
         else:
             _print_error("Unknown data type received: " + data[JSON_KEY_TYPE])
     except ValueError:
@@ -602,23 +637,42 @@ def _map_joint(mosketch_name, maya_joint):
         JOINTS_INIT_ORIENT_INV_BUFFER[mosketch_name] = JO
 
 
-def _send_ack_hierarchy_initialized():
+def _send_hierarchy_initialized_ack():
     '''
-    We send an acknowlegment to let Mosketch know that from now, it can send the JointsStream.
+    We send an acknowlegment to let Mosketch know that hierarchy is correctly initialized on our side.
     '''
     if CONNECTION is None:
         _print_error("Mosketch is not connected!")
         return
     try:
         ack_packet = {}
-        ack_packet[JSON_KEY_TYPE] = "AckHierarchyInitialized"
+        ack_packet[JSON_KEY_TYPE] = "HierarchyInitializedAck"
         json_data = json.dumps([ack_packet])
         CONNECTION.write(json_data)
         CONNECTION.flush()
-        _print_verbose("AckHierarchyInitialized sent", 1)
+        _print_verbose("HierarchyInitializedAck sent", 1)
 
     except Exception, e:
-        _print_error("cannot send AckHierarchyInitialized (" + str(e) + ")")
+        _print_error("cannot send HierarchyInitializedAck (" + str(e) + ")")
+
+
+def _send_joint_uuids_received_ack():
+    '''
+    We send an acknowlegment to let Mosketch know that from that joint uuids are stored and that it can send the JointsStream.
+    '''
+    if CONNECTION is None:
+        _print_error("Mosketch is not connected!")
+        return
+    try:
+        ack_packet = {}
+        ack_packet[JSON_KEY_TYPE] = "JointsUuidsAck"
+        json_data = json.dumps([ack_packet])
+        CONNECTION.write(json_data)
+        CONNECTION.flush()
+        _print_verbose("JointsUuidsAck sent", 1)
+
+    except Exception, e:
+        _print_error("cannot send JointsUuidsAck (" + str(e) + ")")
 
 
 def _send_ack_jointstream_received():
@@ -818,13 +872,13 @@ def _send_command_jointSpace(space_mode):
 def _print_error(error):
     error_msg = "ERROR: " + error
     print error_msg
-    MAIN_WINDOW.status_text.setText(error_msg)
+    MAIN_WINDOW.log_text.setText(error_msg)
 
 
 def _print_success(success):
     success_msg = "SUCCESS: " + success
     print success_msg
-    MAIN_WINDOW.status_text.setText(success_msg)
+    MAIN_WINDOW.log_text.setText(success_msg)
 
 
 def _print_encoding(string):
