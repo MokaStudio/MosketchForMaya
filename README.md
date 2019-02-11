@@ -43,9 +43,9 @@ __In [Mosketch&trade;](https://www.mokastudio.com):__
 __In Maya:__
 1. Import your character
 2. Start ```MosketchForMaya``` Python script by pressing ![Start Mosketch for Maya](https://user-images.githubusercontent.com/7549728/28462640-558a38a6-6e1c-11e7-9d34-b466f11eabe6.png)
-3. Set IP & press Connect
+3. Set IP, set streaming mode (joints or controllers)  & press Connect
 <p align="center">
-<img src ="https://user-images.githubusercontent.com/7549728/28316712-30d73518-6bc4-11e7-8242-6f8fdb1090f2.png" /><br>
+<img src ="https://user-images.githubusercontent.com/7549728/52567024-8b69de80-2e0b-11e9-8cd2-3d8a4319e4b6.png" /><br>
 Mosketch for Maya GUI
 </p>
 
